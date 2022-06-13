@@ -1,0 +1,131 @@
+#include <Encoder.h>
+#define limitSwitchPin 7
+#define limitSwitchPin2 6
+uint8_t MOTOR_IN1 = 9;
+uint8_t MOTOR_IN2 = 10;
+int cycle = 0;
+long maxValue = 6503; //Encoder limit value 
+long minValue = 100; //Encoder limit value 
+bool GoingDown = false;
+bool spinDirection = false;
+bool normalMode = true;
+long currentPosition  = -999;
+long max_time = 30000; //30 seconds before going back
+long delay_time = 2000;
+unsigned long prev_time;
+Encoder encoder(2, 3);
+//   avoid using pins with LEDs attached
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(limitSwitchPin,INPUT_PULLUP);
+  pinMode(limitSwitchPin2,INPUT_PULLUP);
+  pinMode(MOTOR_IN1, OUTPUT);
+  pinMode(MOTOR_IN2, OUTPUT);
+  Serial.println("Encoder Final Test:");
+  initial_position();
+}
+
+void initial_position(){
+  goBackward();
+  while(true){
+    if (digitalRead(limitSwitchPin) == LOW || (digitalRead(limitSwitchPin2) == LOW))
+      break;
+  }
+  encoder.write(minValue);
+  prev_time = millis();
+  goForward();
+  spinDirection = true;
+  while (true){
+      delay(50);
+      if ((digitalRead(limitSwitchPin) == HIGH) && (digitalRead(limitSwitchPin2) == HIGH))
+        break;
+    }
+  GoingDown = true;
+}
+
+void goForward() {
+
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, HIGH);
+ 
+ 
+}
+
+void goBackward() {
+   digitalWrite(MOTOR_IN1, HIGH);
+    digitalWrite(MOTOR_IN2, LOW);
+}
+
+void motorStop(){
+  digitalWrite(MOTOR_IN2, LOW);
+  digitalWrite(MOTOR_IN1, LOW);
+}
+
+void updateCounter(){
+  long newPos;
+  newPos = encoder.read();
+  if (newPos != currentPosition) {
+    Serial.print("Value = ");
+    currentPosition = abs(newPos);
+    Serial.print(currentPosition);
+    Serial.println();
+  }
+}
+
+void loop() {
+  updateCounter();
+  if (currentPosition >= maxValue && GoingDown){
+    Serial.println("Limit Reached");
+    motorStop();
+    prev_time = millis();
+    while (true){
+      if ((millis() - prev_time) > delay_time)
+        break;
+      updateCounter();
+    }
+    if (spinDirection == true){
+      goBackward();
+      encoder.write(maxValue);
+      spinDirection = false;
+    }
+    else{
+      goForward();
+      spinDirection = true;
+      encoder.write(-maxValue);
+    }
+    Serial.println("Going Up!");
+    GoingDown = false;
+  }
+
+  if (cycle == 4){ //after full 4 loops 
+    normalMode = false;
+    cycle = 0;
+  }
+  
+  if ((digitalRead(limitSwitchPin) == LOW) || (digitalRead(limitSwitchPin2) == LOW) || (normalMode && (currentPosition <= minValue))){ //minimum value above zero
+    Serial.println("Reset to min limit");
+    cycle++;
+    if (normalMode == false){
+      normalMode =  true;
+    }
+    if (spinDirection == true){
+      goBackward();
+      encoder.write(-minValue);
+      spinDirection = false;
+    }
+    else{
+      goForward();
+      spinDirection = true;
+      encoder.write(minValue);
+    }
+    GoingDown = true;
+    Serial.println("Going Down!");
+    prev_time = millis();
+    while (true){
+      delay(50);
+      if ((digitalRead(limitSwitchPin) == HIGH) && (digitalRead(limitSwitchPin2) == HIGH))
+        break;
+    }
+  }
+}
