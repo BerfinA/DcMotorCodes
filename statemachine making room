@@ -1,0 +1,163 @@
+
+# needs to be updated and retested / not working 
+
+#define MOTOR_IN1 9
+#define MOTOR_IN2 11
+//const int DelayTime = 2000000;
+//bool directionIsForward;
+//int limitSwitchPin = 8;
+unsigned long movingtime;
+unsigned long movingtime2;
+unsigned long totalMinutesMove = 180000;
+
+
+;
+//unsigned long backwardtime;
+
+bool directionIsDown = true;
+int state;
+int StateStartDown = 0;
+int stateDown = 1;
+unsigned int encoderVal;
+unsigned int topVal= 2700;//4000;//should be 3100//2700 if dont wanna force 
+int stateUp = 2;
+volatile unsigned int counter =0;//65550;
+
+
+void setup() {
+  Serial.begin (9600);
+
+  pinMode(2, INPUT);           // set pin to input
+  pinMode(1, INPUT);
+  // set pin to input
+
+  digitalWrite(2, HIGH);       // turn on pullup resistors
+  digitalWrite(3, HIGH);       // turn on pullup resistors
+
+
+  //Setting up interrupt
+  //A rising pulse from encodenren activated ai0(). AttachInterrupt 0 is DigitalPin nr 2 on moust Arduino.
+  attachInterrupt(0, ai0, RISING);
+
+  //B rising pulse from encodenren activated ai1(). AttachInterrupt 1 is DigitalPin nr 3 on moust Arduino.
+  attachInterrupt(1, ai1, RISING);
+state= stateUp;
+  Serial.begin(9600);
+
+  //Serial.println("DRV8871 test");
+
+  pinMode(MOTOR_IN1, OUTPUT);
+  pinMode(MOTOR_IN2, OUTPUT);
+ // pinMode(  limitSwitchPin, INPUT_PULLUP);
+  //state = stateDown;
+  movingtime = millis();
+
+}
+
+void loop() {
+  // Send the value of counter
+  Serial.println (counter);
+encoderVal= counter;
+
+//int limitSwitchVal = digitalRead(limitSwitchPin);
+
+
+
+if (state==stateUp && encoderVal>topVal && encoderVal<65500) {
+  state = stateDown; //start going down
+//  movingtime = millis();
+  digitalWrite(LED_BUILTIN, LOW);
+  Serial.println("changed to stateDown");
+}
+else if  ( encoderVal>65500) {
+
+  state = stateUp; // start going up
+
+  //movingtime = millis();
+  digitalWrite(LED_BUILTIN, LOW);
+  Serial.println("changed to stateup");
+}
+//  else if (state == stateUp &&digitalRead(limitSwitchPin) == LOW) {
+//    Serial.println("limitswitchlow");
+//    digitalWrite(LED_BUILTIN, HIGH);
+//    state = stateDown; //start returning limit switch pressed start going down
+//    movingtime = millis();
+//    Serial.println("limitswitch");
+//
+//  }
+if (state == stateDown) {
+  goDown();
+}
+else if (state == stateUp) {
+  goUp();
+}
+
+}
+void goDown() {
+
+  //  directionIsDown = true;
+  digitalWrite(MOTOR_IN1, LOW);
+  for (int i = 0; i < 170; i++) {
+    analogWrite(MOTOR_IN2, i);
+  }
+}
+
+//void rampDowngoingDown() {
+//  // ramp down forward
+//  for (int i = 170; i >= 0; i--) {
+//    analogWrite(MOTOR_IN2, i);
+//  }
+//}
+
+void goUp() {
+
+
+  // directionIsDown = false;
+  // ramp up backward
+  digitalWrite(MOTOR_IN2, LOW);
+  for (int i = 0; i < 170; i++) {
+    analogWrite(MOTOR_IN1, i);
+    //delay(10);
+  }
+
+}
+//void rampDowngoingUp() {
+//  for (int i = 170; i >= 0; i--) {
+//    analogWrite(MOTOR_IN1, i);
+//    delay(10);
+//    Serial.println("BACKWARD");
+//  }
+//}
+
+//void limitSwitchReader() {
+//  int limitSwitchVal = analogRead(limitSwitchPin);
+//
+//  if (limitSwitchVal == LOW) {
+//    if (directionIsForward == true) {
+//
+//      goBackward();
+//    }
+//    else if (directionIsForward == false) {
+//
+//      goForward();
+//    }
+//  }
+//}
+void ai0() {
+  // ai0 is activated if DigitalPin nr 2 is going from LOW to HIGH
+  // Check pin 3 to determine the direction
+  if (digitalRead(3) == LOW) {
+    counter++;
+  } else {
+    counter--;
+  }
+}
+void ai1() {
+  // ai0 is activated if DigitalPin nr 3 is going from LOW to HIGH
+  // Check with pin 2 to determine the direction
+  if (digitalRead(2) == LOW) {
+    counter--;
+  } else {
+    counter++;
+  }
+}
