@@ -1,0 +1,83 @@
+ 
+
+enum state {CALIBRATING, MOVING_UP, MOVING_DOWN, WAITING };
+
+ 
+
+void stateMachine_setup()
+
+{}
+
+  Serial.begin(9600);
+
+  pinMode(limitSwitchPin,INPUT_PULLUP);
+
+  pinMode(limitSwitchPin2,INPUT_PULLUP);
+
+  pinMode(MOTOR_IN1, OUTPUT);
+
+  pinMode(MOTOR_IN2, OUTPUT);
+
+  Serial.println("Encoder Final Test:");
+
+  state = CALIBRATING;
+
+}
+
+ 
+
+void stateMachine_loop()
+
+{
+
+    // get inputs
+
+    get_encoder_inputs();
+
+ 
+
+    get_limit_switch_inputs();
+
+ 
+
+    // logic goes here
+
+    encoder_logic();
+
+ 
+
+    limit_switch_logic();
+
+ 
+
+    // do outputs
+
+    if (state == CALIBRATING)
+
+    {
+
+        // do calibration movement
+
+    }
+
+    else if (state == MOVING_FORWARD)
+
+    {
+
+        // do forward moves
+
+    }
+
+    else if (state == MOVING_BACKWARD)
+
+    {
+
+        // do reverse moves
+
+    }
+
+    else if (state = WAITING)
+
+    {
+
+        // do the waiting, don't use delays
