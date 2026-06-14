@@ -1,22 +1,22 @@
   // Making room — ESP32 port with WiFi control
   // Project: MET, Qilmeg / Rodrigo / Berfin, Summer 2026
-  #include <Encoder.h>
+  #include <ESP32Encoder.h>
   #include <WiFi.h>
   #include <WebServer.h>
 
   // ─── WiFi credentials ────────────────────────────────────────────────────────
-  const char* ssid     = "YOUR_SSID";
-  const char* password = "YOUR_PASSWORD";
+  const char* ssid     = "Chillmeng’s Chillphone";
+  const char* password = "12345678";
 
   // ─── Pins (ESP32) ────────────────────────────────────────────────────────────
   #define limitSwitchPin  18
   #define limitSwitchPin2 19
   const uint8_t MOTOR_IN1 = 25;
   const uint8_t MOTOR_IN2 = 26;
-  Encoder encoder(32, 33);  // all ESP32 GPIOs support interrupts
+  ESP32Encoder encoder;
 
   // ─── Position limits ─────────────────────────────────────────────────────────
-  const long maxValue = 2000;
+  const long maxValue = 6503;  // from working code — recalibrate if spool changes
   const long minValue = 100;
 
   // ─── State ───────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@
   void motorStop()  { digitalWrite(MOTOR_IN1, LOW);  digitalWrite(MOTOR_IN2, LOW);  }
 
   void updateCounter() {
-    long p = abs(encoder.read());
+    long p = abs(encoder.getCount());
     if (p != currentPosition) {
       currentPosition = p;
       Serial.print("Pos: "); Serial.println(currentPosition);
@@ -52,7 +52,7 @@
     Serial.println("Homing...");
     goBackward();
     while (digitalRead(limitSwitchPin) == HIGH && digitalRead(limitSwitchPin2) == HIGH) {}
-    encoder.write(minValue);
+    encoder.setCount(minValue);
     goForward();
     spinDirection = true;
     delay(50);
@@ -85,6 +85,8 @@
   // ─── Setup ───────────────────────────────────────────────────────────────────
   void setup() {
     Serial.begin(115200);
+    encoder.attachFullQuad(32, 33);
+    encoder.setCount(0);
     pinMode(limitSwitchPin,  INPUT_PULLUP);
     pinMode(limitSwitchPin2, INPUT_PULLUP);
     pinMode(MOTOR_IN1, OUTPUT);
@@ -92,8 +94,17 @@
 
     WiFi.begin(ssid, password);
     Serial.print("WiFi connecting");
-    while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-    Serial.println("\nIP: " + WiFi.localIP().toString());
+    int wifiTimeout = 0;
+    while (WiFi.status() != WL_CONNECTED && wifiTimeout < 20) {
+      delay(500);
+      Serial.print(".");
+      wifiTimeout++;
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nIP: " + WiFi.localIP().toString());
+    } else {
+      Serial.println("\nWiFi failed — motor cycle still works, no remote trigger.");
+    }
 
     server.on("/trigger", HTTP_GET, handleTrigger);
     server.on("/clear",   HTTP_GET, handleClear);
@@ -112,7 +123,7 @@
     if (triggered) {
       if (!triggeredPrev) {
         motorStop();
-        encoder.write(currentPosition);  // force positive count before going forward
+        encoder.setCount(currentPosition);  // force positive count before going forward
         spinDirection = true;
         GoingDown     = true;
         triggeredPrev = true;
@@ -137,8 +148,8 @@
       if (!pausedAtTop) { prev_time = millis(); pausedAtTop = true; }
       if ((millis() - prev_time) > delay_time) {
         pausedAtTop = false;
-        if (spinDirection) { goBackward(); encoder.write(maxValue);  spinDirection = false; }
-        else               { goForward();  encoder.write(-maxValue); spinDirection = true;  }
+        if (spinDirection) { goBackward(); encoder.setCount(maxValue);  spinDirection = false; }
+        else               { goForward();  encoder.setCount(-maxValue); spinDirection = true;  }
         GoingDown = false;
         Serial.println("Going Up!");
       }
@@ -153,8 +164,8 @@
       Serial.println("Reset to min");
       cycle++;
       if (!normalMode) normalMode = true;
-      if (spinDirection) { goBackward(); encoder.write(-minValue); spinDirection = false; }
-      else               { goForward();  encoder.write(minValue);  spinDirection = true;  }
+      if (spinDirection) { goBackward(); encoder.setCount(-minValue); spinDirection = false; }
+      else               { goForward();  encoder.setCount(minValue);  spinDirection = true;  }
       GoingDown = true;
       Serial.println("Going Down!");
       prev_time = millis();
