@@ -5,7 +5,7 @@
   #include <WebServer.h>
 
   // ─── WiFi credentials ────────────────────────────────────────────────────────
-  const char* ssid     = "Chillmeng’s Chillphone";
+  const char* ssid     = "ChillmegPhone";
   const char* password = "12345678";
 
   // ─── Pins (ESP32) ────────────────────────────────────────────────────────────
